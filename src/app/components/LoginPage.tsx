@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useDiario } from '../context/DiarioContext';
 
@@ -9,7 +9,6 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { user, login, register } = useDiario();
   const [tab, setTab] = useState<'login' | 'register'>('login');
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -20,18 +19,27 @@ export function LoginPage() {
     if (user) navigate('/dashboard', { replace: true });
   }, [user, navigate]);
 
-  const handleSubmit = (e: FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
-    if (tab === 'login') {
-      const ok = login(email, password);
-      if (!ok) setError('Credenciales incorrectas. ¿Quizás necesitas registrarte?');
-      else navigate('/dashboard');
-    } else {
-      if (!name.trim()) { setError('Por favor ingresa tu nombre.'); return; }
-      if (password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres.'); return; }
-      register(name.trim(), email, password);
-      navigate('/dashboard');
+    setSubmitting(true);
+    try {
+      if (tab === 'login') {
+        const ok = await login(email, password);
+        if (!ok) setError('Credenciales incorrectas. ¿Quizás necesitas registrarte?');
+        else navigate('/dashboard');
+      } else {
+        if (password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres.'); setSubmitting(false); return; }
+        const ok = await register(email, password);
+        if (!ok) setError('No se pudo crear la cuenta. El correo ya existe.');
+        else navigate('/dashboard');
+      }
+    } catch {
+      setError('Error de conexión con el servidor.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -43,7 +51,6 @@ export function LoginPage() {
   const switchTab = (t: 'login' | 'register') => {
     setTab(t);
     setError('');
-    setName('');
     setEmail('');
     setPassword('');
   };
@@ -107,20 +114,6 @@ export function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit}>
-            {/* Name field — register only */}
-            <div style={{ overflow: 'hidden', maxHeight: tab === 'register' ? '80px' : '0', opacity: tab === 'register' ? 1 : 0, transition: 'max-height 0.2s, opacity 0.15s', marginBottom: tab === 'register' ? '16px' : '0' }}>
-              <label style={labelStyle}>Nombre</label>
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Tu nombre completo"
-                style={inputStyle('name')}
-                onFocus={() => setFocusedField('name')}
-                onBlur={() => setFocusedField(null)}
-              />
-            </div>
-
             {/* Email */}
             <div style={{ marginBottom: '16px' }}>
               <label style={labelStyle}>Correo electrónico</label>
@@ -174,7 +167,7 @@ export function LoginPage() {
               onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
               onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
             >
-              {tab === 'login' ? 'Entrar' : 'Crear cuenta'}
+              {submitting ? 'Cargando…' : tab === 'login' ? 'Entrar' : 'Crear cuenta'}
             </button>
           </form>
         </div>

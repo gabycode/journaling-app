@@ -143,20 +143,25 @@ export function EntryEditor() {
 
     setValidationError(null);
     setSavedState('saving');
-    if (isNew || !entryId) {
-      const newId = createEntry(title.trim() || 'Sin título', content, isPublic);
-      setEntryId(newId);
-      window.history.replaceState({}, '', `/editor/${newId}`);
-    } else {
-      updateEntry(entryId, { title: title.trim() || 'Sin título', content, isPublic });
+    try {
+      if (isNew || !entryId) {
+        const newId = await createEntry(title.trim() || 'Sin título', content, isPublic);
+        setEntryId(newId);
+        window.history.replaceState({}, '', `/editor/${newId}`);
+      } else {
+        await updateEntry(entryId, { title: title.trim() || 'Sin título', content, isPublic });
+      }
+      setIsDirty(false);
+      setSavedState('saved');
+      setTimeout(() => setSavedState('idle'), 2500);
+    } catch {
+      setValidationError('Error al guardar. Intenta de nuevo.');
+      setSavedState('idle');
     }
-    setIsDirty(false);
-    setSavedState('saved');
-    setTimeout(() => setSavedState('idle'), 2500);
   };
 
-  const handleDelete = () => {
-    if (entryId) deleteEntry(entryId);
+  const handleDelete = async () => {
+    if (entryId) await deleteEntry(entryId);
     navigate('/dashboard');
   };
 

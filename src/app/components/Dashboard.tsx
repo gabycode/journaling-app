@@ -28,7 +28,7 @@ type FilterType = 'all' | 'private' | 'public';
 export function Dashboard() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, entries, logout, deleteEntry, updateProfile } = useDiario();
+  const { user, entries, loading, logout, deleteEntry } = useDiario();
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -58,16 +58,9 @@ export function Dashboard() {
     else setSearchParams({ filter: f });
   };
 
-  const handleDelete = (id: string) => {
-    deleteEntry(id);
+  const handleDelete = async (id: string) => {
+    await deleteEntry(id);
     setDeleteConfirmId(null);
-  };
-
-  const handleSaveProfile = () => {
-    if (settingsName.trim()) {
-      updateProfile(settingsName.trim());
-    }
-    setShowSettings(false);
   };
 
   const navItems = [
@@ -199,25 +192,15 @@ export function Dashboard() {
               <div style={{ backgroundColor: '#FFFFFF', border: '0.5px solid rgba(26,26,24,0.12)', borderRadius: '8px', padding: '28px' }}>
                 <div style={{ marginBottom: '20px' }}>
                   <label style={smLabel}>Nombre</label>
-                  <input
-                    type="text"
-                    value={settingsName}
-                    onChange={e => setSettingsName(e.target.value)}
-                    style={{ width: '100%', padding: '10px 14px', backgroundColor: '#F7F6F3', border: '0.5px solid rgba(26,26,24,0.15)', borderRadius: '8px', fontSize: '14px', color: '#1A1A18', outline: 'none', fontFamily: sans, boxSizing: 'border-box' }}
-                  />
+                  <div style={{ padding: '10px 14px', backgroundColor: '#F7F6F3', border: '0.5px solid rgba(26,26,24,0.1)', borderRadius: '8px', fontSize: '14px', color: '#1A1A18', fontFamily: sans }}>{user.name}</div>
                 </div>
                 <div style={{ marginBottom: '28px' }}>
                   <label style={smLabel}>Correo electrónico</label>
                   <div style={{ padding: '10px 14px', backgroundColor: '#F7F6F3', border: '0.5px solid rgba(26,26,24,0.1)', borderRadius: '8px', fontSize: '14px', color: '#9B9B95', fontFamily: sans }}>{user.email}</div>
                 </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button onClick={handleSaveProfile} style={{ padding: '10px 20px', backgroundColor: '#1A1A18', color: '#FFF', border: 'none', borderRadius: '8px', fontSize: '13px', fontFamily: sans, fontWeight: '500', cursor: 'pointer' }}>
-                    Guardar cambios
-                  </button>
-                  <button onClick={() => setShowSettings(false)} style={{ padding: '10px 20px', backgroundColor: 'transparent', color: '#6B6B65', border: '0.5px solid rgba(26,26,24,0.18)', borderRadius: '8px', fontSize: '13px', fontFamily: sans, cursor: 'pointer' }}>
-                    Cancelar
-                  </button>
-                </div>
+                <button onClick={() => setShowSettings(false)} style={{ padding: '10px 20px', backgroundColor: 'transparent', color: '#6B6B65', border: '0.5px solid rgba(26,26,24,0.18)', borderRadius: '8px', fontSize: '13px', fontFamily: sans, cursor: 'pointer' }}>
+                    Volver
+                </button>
               </div>
 
               <div style={{ marginTop: '20px', backgroundColor: '#FFFFFF', border: '0.5px solid rgba(26,26,24,0.12)', borderRadius: '8px', padding: '24px 28px' }}>
@@ -275,7 +258,11 @@ export function Dashboard() {
               </div>
 
               {/* Entry list */}
-              {filtered.length === 0 ? (
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '64px 24px', color: '#9B9B95' }}>
+                  <p style={{ fontSize: '14px', fontFamily: sans }}>Cargando entradas…</p>
+                </div>
+              ) : filtered.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '64px 24px', color: '#9B9B95' }}>
                   <div style={{ fontFamily: serif, fontSize: '22px', fontWeight: '400', marginBottom: '10px', color: '#C4C0BA' }}>Silencio por aquí.</div>
                   <p style={{ fontSize: '14px', fontFamily: sans, lineHeight: '1.6', margin: '0 0 24px' }}>
