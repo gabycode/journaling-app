@@ -5,6 +5,71 @@ import { ArrowLeft, Lock, Globe, Trash2, Check, ExternalLink } from 'lucide-reac
 
 const serif = "'Playfair Display', Georgia, serif";
 const sans = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
+const badWords = [
+  'asqueroso',
+  'basura',
+  'carajo',
+  'estupido',
+  'estupida',
+  'feo',
+  'fea',
+  'idiota',
+  'imbecil',
+  'joder',
+  'maldito',
+  'maldita',
+  'malo',
+  'mala',
+  'mierda',
+  'odio',
+  'puto',
+  'puta',
+];
+
+function normalizeForFilter(text: string) {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[0]/g, 'o')
+    .replace(/[1!|]/g, 'i')
+    .replace(/[3]/g, 'e')
+    .replace(/[4@]/g, 'a')
+    .replace(/[5$]/g, 's')
+    .replace(/[7]/g, 't')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function escapeForRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function buildBadWordsRegex(words: string[]) {
+  const wordPatterns = words.map((word) => {
+    const chars = [...word].map((char) => `${escapeForRegex(char)}+`);
+    return chars.join('[\\s._-]*');
+  });
+
+  return new RegExp(`\\b(?:${wordPatterns.join('|')})\\b`, 'gi');
+}
+
+const badWordsRegex = buildBadWordsRegex(badWords);
+
+function findBadWords(text: string) {
+  const normalized = normalizeForFilter(text);
+  if (!normalized) return [];
+
+  const matches = new Set<string>();
+  badWordsRegex.lastIndex = 0;
+
+  for (const match of normalized.matchAll(badWordsRegex)) {
+    const found = match[0]?.replace(/[\s._-]+/g, '');
+    if (found) matches.add(found);
+  }
+
+  return [...matches];
+}
 
 function wordCount(text: string) {
   const trimmed = text.trim();
@@ -25,8 +90,8 @@ export function EntryEditor() {
   const [isDirty, setIsDirty] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [entryId, setEntryId] = useState<string | undefined>(id);
-  const [showPublicLink, setShowPublicLink] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
@@ -66,6 +131,17 @@ export function EntryEditor() {
 
   const handleSave = async () => {
     if (!user) return;
+
+    const textToValidate = `${title} ${content}`.trim();
+    const foundBadWords = findBadWords(textToValidate);
+    if (foundBadWords.length > 0) {
+      const wordsText = foundBadWords.slice(0, 3).join(', ');
+      setValidationError(`Tu entrada contiene palabras no permitidas: ${wordsText}.`);
+      setSavedState('idle');
+      return;
+    }
+
+    setValidationError(null);
     setSavedState('saving');
     if (isNew || !entryId) {
       const newId = createEntry(title.trim() || 'Sin título', content, isPublic);
@@ -95,12 +171,14 @@ export function EntryEditor() {
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setTitle(e.target.value);
     setIsDirty(true);
+    setValidationError(null);
     setSavedState('idle');
   };
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
     setIsDirty(true);
+    setValidationError(null);
     setSavedState('idle');
   };
 
@@ -246,6 +324,23 @@ export function EntryEditor() {
 
       {/* Writing area */}
       <div style={{ flex: 1, maxWidth: '680px', margin: '0 auto', width: '100%', padding: '48px 24px 80px' }}>
+
+        {validationError && (
+          <div
+            style={{
+              marginBottom: '18px',
+              backgroundColor: '#FFF1EE',
+              border: '0.5px solid rgba(184,92,58,0.35)',
+              borderRadius: '8px',
+              color: '#8F3F24',
+              fontSize: '13px',
+              fontFamily: sans,
+              padding: '10px 12px',
+            }}
+          >
+            {validationError}
+          </div>
+        )}
 
         {/* Title */}
         <textarea
