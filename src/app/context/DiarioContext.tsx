@@ -1,9 +1,22 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import {
-  apiLogin, apiRegister, apiLogout, hasToken,
-  apiGetEntradas, apiCreateEntrada, apiUpdateEntrada, apiDeleteEntrada,
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from "react";
+import {
+  apiLogin,
+  apiRegister,
+  apiLogout,
+  hasToken,
+  apiGetEntradas,
+  apiCreateEntrada,
+  apiUpdateEntrada,
+  apiDeleteEntrada,
   type EntradaAPI,
-} from '../api';
+} from "../api";
 
 export interface Entry {
   id: string;
@@ -21,16 +34,32 @@ export interface User {
   email: string;
 }
 
+export interface AuthResult {
+  ok: boolean;
+  error?: string;
+}
+
 interface DiarioContextType {
   user: User | null;
   entries: Entry[];
   loading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<AuthResult>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+  ) => Promise<AuthResult>;
   logout: () => void;
   refreshEntries: () => Promise<void>;
-  createEntry: (title: string, content: string, isPublic: boolean) => Promise<string>;
-  updateEntry: (id: string, updates: Partial<Pick<Entry, 'title' | 'content' | 'isPublic'>>) => Promise<void>;
+  createEntry: (
+    title: string,
+    content: string,
+    isPublic: boolean,
+  ) => Promise<string>;
+  updateEntry: (
+    id: string,
+    updates: Partial<Pick<Entry, "title" | "content" | "isPublic">>,
+  ) => Promise<void>;
   deleteEntry: (id: string) => Promise<void>;
   getEntry: (id: string) => Entry | undefined;
 }
@@ -51,7 +80,7 @@ function mapEntrada(e: EntradaAPI): Entry {
 
 function parseJwt(token: string): { id: number; email: string } | null {
   try {
-    const payload = token.split('.')[1];
+    const payload = token.split(".")[1];
     return JSON.parse(atob(payload));
   } catch {
     return null;
@@ -59,11 +88,15 @@ function parseJwt(token: string): { id: number; email: string } | null {
 }
 
 function loadUserFromToken(): User | null {
-  const token = localStorage.getItem('diario_token');
+  const token = localStorage.getItem("diario_token");
   if (!token) return null;
   const payload = parseJwt(token);
   if (!payload) return null;
-  return { id: String(payload.id), name: payload.email.split('@')[0], email: payload.email };
+  return {
+    id: String(payload.id),
+    name: payload.email.split("@")[0],
+    email: payload.email,
+  };
 }
 
 export function DiarioProvider({ children }: { children: ReactNode }) {
@@ -88,24 +121,39 @@ export function DiarioProvider({ children }: { children: ReactNode }) {
     if (user) refreshEntries();
   }, [user, refreshEntries]);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (
+    email: string,
+    password: string,
+  ): Promise<AuthResult> => {
     try {
       await apiLogin(email, password);
       setUser(loadUserFromToken());
-      return true;
-    } catch {
-      return false;
+      return { ok: true };
+    } catch (err) {
+      return {
+        ok: false,
+        error:
+          err instanceof Error ? err.message : "No se pudo iniciar sesión.",
+      };
     }
   };
 
-  const register = async (email: string, password: string): Promise<boolean> => {
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+  ): Promise<AuthResult> => {
     try {
-      await apiRegister(email, password);
+      await apiRegister(name, email, password);
       await apiLogin(email, password);
       setUser(loadUserFromToken());
-      return true;
-    } catch {
-      return false;
+      return { ok: true };
+    } catch (err) {
+      return {
+        ok: false,
+        error:
+          err instanceof Error ? err.message : "No se pudo crear la cuenta.",
+      };
     }
   };
 
@@ -115,15 +163,22 @@ export function DiarioProvider({ children }: { children: ReactNode }) {
     setEntries([]);
   };
 
-  const createEntry = async (title: string, content: string, isPublic: boolean): Promise<string> => {
+  const createEntry = async (
+    title: string,
+    content: string,
+    isPublic: boolean,
+  ): Promise<string> => {
     const res = await apiCreateEntrada(title, content, isPublic);
     const newId = String(res.id);
     await refreshEntries();
     return newId;
   };
 
-  const updateEntry = async (id: string, updates: Partial<Pick<Entry, 'title' | 'content' | 'isPublic'>>) => {
-    const existing = entries.find(e => e.id === id);
+  const updateEntry = async (
+    id: string,
+    updates: Partial<Pick<Entry, "title" | "content" | "isPublic">>,
+  ) => {
+    const existing = entries.find((e) => e.id === id);
     if (!existing) return;
     await apiUpdateEntrada(
       id,
@@ -136,13 +191,27 @@ export function DiarioProvider({ children }: { children: ReactNode }) {
 
   const deleteEntry = async (id: string) => {
     await apiDeleteEntrada(id);
-    setEntries(prev => prev.filter(e => e.id !== id));
+    setEntries((prev) => prev.filter((e) => e.id !== id));
   };
 
-  const getEntry = (id: string) => entries.find(e => e.id === id);
+  const getEntry = (id: string) => entries.find((e) => e.id === id);
 
   return (
-    <DiarioContext.Provider value={{ user, entries, loading, login, register, logout, refreshEntries, createEntry, updateEntry, deleteEntry, getEntry }}>
+    <DiarioContext.Provider
+      value={{
+        user,
+        entries,
+        loading,
+        login,
+        register,
+        logout,
+        refreshEntries,
+        createEntry,
+        updateEntry,
+        deleteEntry,
+        getEntry,
+      }}
+    >
       {children}
     </DiarioContext.Provider>
   );
@@ -150,6 +219,6 @@ export function DiarioProvider({ children }: { children: ReactNode }) {
 
 export function useDiario() {
   const ctx = useContext(DiarioContext);
-  if (!ctx) throw new Error('useDiario must be inside DiarioProvider');
+  if (!ctx) throw new Error("useDiario must be inside DiarioProvider");
   return ctx;
 }
