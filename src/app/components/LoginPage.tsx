@@ -40,7 +40,7 @@ export function LoginPage() {
         else navigate("/dashboard");
       } else {
         if (!name.trim()) {
-          setError("Ingresa tu nombre para crear la cuenta.");
+          setError("Ingresa tu nombre de usuario para crear la cuenta.");
           setSubmitting(false);
           return;
         }
@@ -200,12 +200,12 @@ export function LoginPage() {
             {/* Name */}
             {tab === "register" && (
               <div style={{ marginBottom: "16px" }}>
-                <label style={labelStyle}>Nombre</label>
+                <label style={labelStyle}>Nombre de usuario</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Tu nombre"
+                  placeholder="Tu nombre de usuario"
                   required
                   style={inputStyle("name")}
                   onFocus={() => setFocusedField("name")}
