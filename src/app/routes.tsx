@@ -10,6 +10,7 @@ export const router = createBrowserRouter([
   { path: "/login", Component: LoginPage },
   { path: "/reset-password", Component: ResetPasswordPage },
   { path: "/dashboard", Component: Dashboard },
+  { path: "/public-entries", Component: Dashboard },
   { path: "/editor/new", Component: EntryEditor },
   { path: "/editor/:id", Component: EntryEditor },
   { path: "/entry/:id", Component: PublicEntryView },

@@ -66,6 +66,20 @@ interface DiarioContextType {
 
 const DiarioContext = createContext<DiarioContextType | null>(null);
 
+const USERNAME_STORAGE_KEY = "diario_username";
+
+function setStoredUsername(name: string) {
+  localStorage.setItem(USERNAME_STORAGE_KEY, name);
+}
+
+function getStoredUsername(): string | null {
+  return localStorage.getItem(USERNAME_STORAGE_KEY);
+}
+
+function clearStoredUsername() {
+  localStorage.removeItem(USERNAME_STORAGE_KEY);
+}
+
 function mapEntrada(e: EntradaAPI): Entry {
   return {
     id: String(e.notas_id),
@@ -78,7 +92,14 @@ function mapEntrada(e: EntradaAPI): Entry {
   };
 }
 
-function parseJwt(token: string): { id: number; email: string } | null {
+function parseJwt(token: string): {
+  id: number;
+  email: string;
+  nombreUsuario?: string;
+  nombre_usuario?: string;
+  username?: string;
+  name?: string;
+} | null {
   try {
     const payload = token.split(".")[1];
     return JSON.parse(atob(payload));
@@ -92,9 +113,26 @@ function loadUserFromToken(): User | null {
   if (!token) return null;
   const payload = parseJwt(token);
   if (!payload) return null;
+  const username =
+    payload.nombreUsuario ||
+    payload.nombre_usuario ||
+    payload.username ||
+    payload.name ||
+    getStoredUsername() ||
+    payload.email.split("@")[0];
+
+  if (
+    payload.nombreUsuario ||
+    payload.nombre_usuario ||
+    payload.username ||
+    payload.name
+  ) {
+    setStoredUsername(username);
+  }
+
   return {
     id: String(payload.id),
-    name: payload.email.split("@")[0],
+    name: username,
     email: payload.email,
   };
 }
@@ -146,6 +184,7 @@ export function DiarioProvider({ children }: { children: ReactNode }) {
     try {
       await apiRegister(name, email, password);
       await apiLogin(email, password);
+      setStoredUsername(name.trim());
       setUser(loadUserFromToken());
       return { ok: true };
     } catch (err) {
@@ -159,6 +198,7 @@ export function DiarioProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     apiLogout();
+    clearStoredUsername();
     setUser(null);
     setEntries([]);
   };

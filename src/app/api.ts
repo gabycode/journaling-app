@@ -128,6 +128,20 @@ export interface EntradaPublicaAPI {
   fecha: string;
 }
 
+export interface EntradaPublicaListaAPI {
+  notas_id: number;
+  titulo: string;
+  nota: string;
+  fecha: string;
+  usuario_id?: number;
+  nombre_usuario?: string;
+  autor?: string;
+}
+
+export async function apiGetEntradasPublicas() {
+  return request<EntradaPublicaListaAPI[]>("/entradas/publicas");
+}
+
 export async function apiGetEntradaPublica(id: string) {
   return request<EntradaPublicaAPI>(`/entradas/publica/${id}`);
 }
